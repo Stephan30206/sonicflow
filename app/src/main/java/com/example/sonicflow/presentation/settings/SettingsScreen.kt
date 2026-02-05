@@ -18,14 +18,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.sonicflow.presentation.settings.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    var darkMode by remember { mutableStateOf(true) }
+    val isDarkMode by viewModel.isDarkModeEnabled.collectAsState()
     var notifications by remember { mutableStateOf(true) }
+
+    val audioQuality by viewModel.audioQuality.collectAsState()
+    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
+    val cacheSize by viewModel.cacheSize.collectAsState()
 
     Scaffold(
         containerColor = Color(0xFF121212),
@@ -66,9 +73,9 @@ fun SettingsScreen(
             SettingsSwitch(
                 icon = Icons.Default.DarkMode,
                 title = "Dark Mode",
-                subtitle = "Use dark theme",
-                checked = darkMode,
-                onCheckedChange = { darkMode = it }
+                subtitle = if (isDarkMode) "Enabled" else "Disabled",
+                checked = isDarkMode,
+                onCheckedChange = { viewModel.setDarkMode(it) }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -92,8 +99,8 @@ fun SettingsScreen(
             SettingsItem(
                 icon = Icons.Default.MusicNote,
                 title = "Audio Quality",
-                subtitle = "High quality",
-                onClick = { /* TODO */ }
+                subtitle = audioQuality,
+                onClick = { viewModel.setAudioQuality("Very High") }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -101,8 +108,8 @@ fun SettingsScreen(
             SettingsItem(
                 icon = Icons.Default.Speed,
                 title = "Playback Speed",
-                subtitle = "Normal (1.0x)",
-                onClick = { /* TODO */ }
+                subtitle = playbackSpeed,
+                onClick = { viewModel.setPlaybackSpeed("1.25x") }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -114,7 +121,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Folder,
                 title = "Music Folders",
                 subtitle = "Manage music locations",
-                onClick = { /* TODO */ }
+                onClick = { viewModel.openMusicFolders() }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -122,8 +129,8 @@ fun SettingsScreen(
             SettingsItem(
                 icon = Icons.Default.Storage,
                 title = "Clear Cache",
-                subtitle = "Free up space",
-                onClick = { /* TODO */ }
+                subtitle = cacheSize,
+                onClick = { viewModel.clearCache() }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -144,7 +151,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Star,
                 title = "Rate App",
                 subtitle = "Support us on Play Store",
-                onClick = { /* TODO */ }
+                onClick = { viewModel.rateApp() }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -153,7 +160,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Code,
                 title = "Open Source Licenses",
                 subtitle = "View licenses",
-                onClick = { /* TODO */ }
+                onClick = { viewModel.openSourceLicenses() }
             )
         }
     }

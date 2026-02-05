@@ -14,6 +14,6 @@ enum class RepeatMode {
     OFF, ALL, ONE
 }
 
-enum class SortType {
-    DATE_ADDED, TITLE, ARTIST, DURATION
-}
+//enum class SortType {
+//    DATE_ADDED, TITLE, ARTIST, DURATION, ALBUM
+//}

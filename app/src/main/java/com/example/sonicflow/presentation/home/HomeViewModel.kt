@@ -11,6 +11,7 @@ import com.example.sonicflow.domain.usecase.SearchTracksUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,10 +34,13 @@ class HomeViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _refreshTrigger = MutableStateFlow(0)
+
     val tracks: StateFlow<List<Track>> = combine(
         _searchQuery,
-        _sortType
-    ) { query, sort ->
+        _sortType,
+        _refreshTrigger
+    ) { query, sort, _ ->
         Pair(query, sort)
     }.flatMapLatest { (query, sort) ->
         if (query.isBlank()) {
@@ -80,6 +84,10 @@ class HomeViewModel @Inject constructor(
             _error.value = null
             try {
                 scanMediaUseCase()
+                // Attendre un peu pour que le scan soit terminé
+                delay(500)
+                // Forcer le rechargement des tracks
+                _refreshTrigger.value += 1
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error occurred"
             } finally {
@@ -88,7 +96,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Appelé quand les permissions sont accordées
+     * pour recharger immédiatement les médias
+     */
+    fun onPermissionsGranted() {
+        viewModelScope.launch {
+            // Petit délai pour laisser le système se préparer
+            delay(200)
+            scanMedia()
+        }
+    }
+
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * Force un rechargement manuel des tracks
+     */
+    fun refreshTracks() {
+        _refreshTrigger.value += 1
     }
 }

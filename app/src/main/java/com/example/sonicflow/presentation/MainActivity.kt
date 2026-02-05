@@ -7,19 +7,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.sonicflow.data.preferences.UserPreferences
+import com.example.sonicflow.presentation.albums.AlbumsScreen
+import com.example.sonicflow.presentation.artists.ArtistsScreen
+import com.example.sonicflow.presentation.components.BottomNavBar
+import com.example.sonicflow.presentation.components.MiniPlayer
+import com.example.sonicflow.presentation.favorites.FavoritesScreen
 import com.example.sonicflow.presentation.home.HomeScreen
-import com.example.sonicflow.presentation.library.LibraryScreen
 import com.example.sonicflow.presentation.player.MusicPlayerScreen
+import com.example.sonicflow.presentation.player.PlayerViewModel
+import com.example.sonicflow.presentation.playlists.PlaylistsScreen
 import com.example.sonicflow.presentation.settings.SettingsScreen
+import com.example.sonicflow.presentation.settings.SettingsViewModel
 import com.example.sonicflow.service.MusicService
 import com.example.sonicflow.service.MusicServiceConnection
 import com.example.sonicflow.ui.theme.SonicFlowTheme
@@ -31,6 +42,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var musicServiceConnection: MusicServiceConnection
+
+    @Inject
+    lateinit var userPreferences: UserPreferences
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -44,72 +58,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Demander les permissions
         requestPermissions()
 
         setContent {
-            SonicFlowTheme {
+            val isDarkMode by userPreferences.isDarkModeEnabled.collectAsState(initial = true)
+
+            SonicFlowTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
-
-                    // Connecter au service de musique
-                    LaunchedEffect(Unit) {
-                        musicServiceConnection.connect()
-                    }
-
-                    // Navigation
-                    NavHost(
-                        navController = navController,
-                        startDestination = "home"
-                    ) {
-                        // Écran Home (Liste des morceaux)
-                        composable("home") {
-                            HomeScreen(
-                                onNavigateToPlayer = {
-                                    navController.navigate("player")
-                                },
-                                onNavigateToLibrary = {
-                                    navController.navigate("library")
-                                },
-                                onNavigateToSettings = {
-                                    navController.navigate("settings")
-                                }
-                            )
-                        }
-
-                        // Écran Player (Lecteur de musique)
-                        composable("player") {
-                            MusicPlayerScreen(
-                                onNavigateBack = {
-                                    navController.navigateUp()
-                                }
-                            )
-                        }
-
-                        // Écran Library (Playlists)
-                        composable("library") {
-                            LibraryScreen(
-                                onNavigateBack = {
-                                    navController.navigateUp()
-                                },
-                                onNavigateToPlayer = {
-                                    navController.navigate("player")
-                                }
-                            )
-                        }
-
-                        // Écran Settings
-                        composable("settings") {
-                            SettingsScreen(
-                                onNavigateBack = {
-                                    navController.navigateUp()
-                                }
-                            )
-                        }
-                    }
+                    AppNavigation(musicServiceConnection)
                 }
             }
         }
@@ -151,5 +110,116 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         musicServiceConnection.disconnect()
+    }
+}
+
+@Composable
+fun AppNavigation(musicServiceConnection: MusicServiceConnection) {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val playerViewModel: PlayerViewModel = hiltViewModel()
+
+    LaunchedEffect(Unit) {
+        musicServiceConnection.connect()
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                NavHost(
+                    navController = navController,
+                    startDestination = "home"
+                ) {
+                    composable("home") {
+                        HomeScreen(
+                            onNavigateToPlayer = { navController.navigate("player") },
+                            onNavigateToLibrary = { navController.navigate("favorites") },
+                            onNavigateToSettings = { navController.navigate("settings") }
+                        )
+                    }
+
+                    composable("artists") {
+                        ArtistsScreen(
+                            onNavigateToPlayer = { navController.navigate("player") }
+                        )
+                    }
+
+                    composable("albums") {
+                        AlbumsScreen(
+                            onNavigateToPlayer = { navController.navigate("player") }
+                        )
+                    }
+
+                    composable("playlists") {
+                        PlaylistsScreen(
+                            onNavigateToPlayer = { navController.navigate("player") }
+                        )
+                    }
+
+                    composable("favorites") {
+                        FavoritesScreen(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToPlayer = { navController.navigate("player") }
+                        )
+                    }
+
+                    composable("player") {
+                        MusicPlayerScreen(
+                            viewModel = playerViewModel,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable("settings") {
+                        SettingsScreen(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                }
+            }
+
+            if (currentRoute != "player") {
+                MiniPlayer(
+                    viewModel = playerViewModel,
+                    onExpandPlayer = { navController.navigate("player") }
+                )
+            }
+
+            if (currentRoute in listOf("home", "artists", "albums", "playlists")) {
+                BottomNavBar(
+                    currentRoute = currentRoute ?: "home",
+                    onNavigateToHome = {
+                        if (currentRoute != "home") {
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = true }
+                            }
+                        }
+                    },
+                    onNavigateToArtists = {
+                        if (currentRoute != "artists") {
+                            navController.navigate("artists") {
+                                popUpTo("home")
+                            }
+                        }
+                    },
+                    onNavigateToAlbums = {
+                        if (currentRoute != "albums") {
+                            navController.navigate("albums") {
+                                popUpTo("home")
+                            }
+                        }
+                    },
+                    onNavigateToPlaylists = {
+                        if (currentRoute != "playlists") {
+                            navController.navigate("playlists") {
+                                popUpTo("home")
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 }

@@ -5,14 +5,17 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import com.example.sonicflow.data.database.dao.FavoriteDao
+import com.example.sonicflow.data.database.dao.PlaylistDao
 import com.example.sonicflow.data.database.dao.TrackDao
-import com.example.sonicflow.data.database.entities.TrackEntity
+import com.example.sonicflow.data.database.entities.*
 import com.example.sonicflow.data.model.SortType
 import com.example.sonicflow.data.model.Track
 import com.example.sonicflow.domain.mapper.TrackMapper.toDomain
 import com.example.sonicflow.domain.mapper.TrackMapper.toEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,9 +23,12 @@ import javax.inject.Singleton
 @Singleton
 class MusicRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val trackDao: TrackDao
+    private val trackDao: TrackDao,
+    private val favoriteDao: FavoriteDao,
+    private val playlistDao: PlaylistDao
 ) {
 
+    // ========== TRACKS ==========
     fun getAllTracks(): Flow<List<Track>> {
         return trackDao.getAllTracks().map { entities ->
             entities.toDomain()
@@ -35,6 +41,7 @@ class MusicRepository @Inject constructor(
             SortType.TITLE -> trackDao.getTracksSortedByTitle()
             SortType.ARTIST -> trackDao.getTracksSortedByArtist()
             SortType.DURATION -> trackDao.getTracksSortedByDuration()
+            SortType.ALBUM -> trackDao.getTracksSortedByAlbum() // Fix: Ajout du cas ALBUM
         }.map { it.toDomain() }
     }
 
@@ -44,6 +51,10 @@ class MusicRepository @Inject constructor(
 
     suspend fun getTrackById(trackId: Long): Track? {
         return trackDao.getTrackById(trackId)?.toDomain()
+    }
+
+    fun getTrackByIdFlow(trackId: Long): Flow<Track?> {
+        return trackDao.getTrackByIdFlow(trackId).map { it?.toDomain() }
     }
 
     suspend fun scanMediaStore() {
@@ -88,23 +99,22 @@ class MusicRepository @Inject constructor(
                 val albumId = cursor.getLong(albumIdColumn)
                 val dateAdded = cursor.getLong(dateAddedColumn)
 
-                // FIX : Utiliser l'URI du fichier audio directement pour l'album art
+                // Generate album art URI compatible with Android 10+
                 val albumArtUri = try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // Android 10+ : Utiliser l'URI de l'audio lui-même
+                        // For Android 10+, use the MediaStore Albums URI
                         ContentUris.withAppendedId(
-                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                            id
+                            MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+                            albumId
                         ).toString()
                     } else {
-                        // Android < 10 : Utiliser l'ancienne méthode
+                        // For Android 9 and below, use the legacy albumart URI
                         ContentUris.withAppendedId(
                             Uri.parse("content://media/external/audio/albumart"),
                             albumId
                         ).toString()
                     }
                 } catch (e: Exception) {
-                    // En cas d'erreur, retourner null
                     null
                 }
 
@@ -131,5 +141,119 @@ class MusicRepository @Inject constructor(
             val track = entity.toDomain().copy(waveformData = waveformData)
             trackDao.updateTrack(track.toEntity())
         }
+    }
+
+    // ========== FAVORIS ==========
+    fun getAllFavoriteTracks(): Flow<List<Track>> {
+        return favoriteDao.getFavoriteTrackIds().flatMapLatest { favoriteIds ->
+            getAllTracks().map { allTracks ->
+                allTracks.filter { it.id in favoriteIds }
+            }
+        }
+    }
+
+    fun isFavorite(trackId: Long): Flow<Boolean> {
+        return favoriteDao.isFavorite(trackId)
+    }
+
+    suspend fun toggleFavorite(trackId: Long) {
+        val isFav = favoriteDao.isFavoriteSync(trackId)
+        if (isFav) {
+            favoriteDao.removeFavorite(trackId)
+        } else {
+            favoriteDao.addFavorite(FavoriteEntity(trackId))
+        }
+    }
+
+    suspend fun addToFavorites(trackId: Long) {
+        favoriteDao.addFavorite(FavoriteEntity(trackId))
+    }
+
+    suspend fun removeFromFavorites(trackId: Long) {
+        favoriteDao.removeFavorite(trackId)
+    }
+
+    // ========== ARTISTES ==========
+    fun getAllArtists(): Flow<List<String>> {
+        return getAllTracks().map { tracks ->
+            tracks.map { it.artist }
+                .distinct()
+                .filter { it.isNotBlank() && it != "Unknown Artist" }
+                .sorted()
+        }
+    }
+
+    fun getTracksByArtist(artist: String): Flow<List<Track>> {
+        return getAllTracks().map { tracks ->
+            tracks.filter { it.artist == artist }
+                .sortedBy { it.title }
+        }
+    }
+
+    // ========== ALBUMS ==========
+    fun getAllAlbums(): Flow<List<String>> {
+        return getAllTracks().map { tracks ->
+            tracks.map { it.album }
+                .distinct()
+                .filter { it.isNotBlank() && it != "Unknown Album" }
+                .sorted()
+        }
+    }
+
+    fun getTracksByAlbum(album: String): Flow<List<Track>> {
+        return getAllTracks().map { tracks ->
+            tracks.filter { it.album == album }
+                .sortedBy { it.title }
+        }
+    }
+
+    // ========== PLAYLISTS ==========
+    fun getAllPlaylists(): Flow<List<PlaylistEntity>> {
+        return playlistDao.getAllPlaylists()
+    }
+
+    suspend fun getPlaylistById(playlistId: Long): Flow<PlaylistEntity?> {
+        return playlistDao.getPlaylistById(playlistId)
+    }
+
+    suspend fun createPlaylist(name: String, description: String = ""): Long {
+        val playlist = PlaylistEntity(name = name, description = description)
+        return playlistDao.insertPlaylist(playlist)
+    }
+
+    suspend fun updatePlaylist(playlist: PlaylistEntity) {
+        playlistDao.updatePlaylist(playlist.copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun deletePlaylist(playlist: PlaylistEntity) {
+        playlistDao.deletePlaylist(playlist)
+    }
+
+    fun getTracksInPlaylist(playlistId: Long): Flow<List<Track>> {
+        return playlistDao.getTrackIdsInPlaylist(playlistId).flatMapLatest { trackIds ->
+            getAllTracks().map { allTracks ->
+                trackIds.mapNotNull { id ->
+                    allTracks.find { it.id == id }
+                }
+            }
+        }
+    }
+
+    suspend fun addTrackToPlaylist(playlistId: Long, trackId: Long) {
+        val maxPosition = playlistDao.getMaxPosition(playlistId) ?: -1
+        val crossRef = PlaylistTrackCrossRef(
+            playlistId = playlistId,
+            trackId = trackId,
+            position = maxPosition + 1
+        )
+        playlistDao.addTrackToPlaylist(crossRef)
+    }
+
+    suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: Long) {
+        playlistDao.removeTrackFromPlaylist(playlistId, trackId)
+    }
+
+    suspend fun getPlaylistTrackCount(playlistId: Long): Flow<Int> {
+        return playlistDao.getPlaylistTrackCount(playlistId)
     }
 }

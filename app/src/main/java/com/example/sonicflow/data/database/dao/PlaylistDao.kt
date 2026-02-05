@@ -8,12 +8,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaylistDao {
-
-    @Query("SELECT * FROM playlists ORDER BY createdAt DESC")
+    @Query("SELECT * FROM playlists ORDER BY updatedAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
-    suspend fun getPlaylistById(playlistId: Long): PlaylistEntity?
+    fun getPlaylistById(playlistId: Long): Flow<PlaylistEntity?>
+
+    @Query("SELECT * FROM playlists WHERE id = :playlistId")
+    suspend fun getPlaylistByIdSync(playlistId: Long): PlaylistEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity): Long
@@ -24,20 +26,24 @@ interface PlaylistDao {
     @Delete
     suspend fun deletePlaylist(playlist: PlaylistEntity)
 
+    @Query("SELECT trackId FROM playlist_tracks WHERE playlistId = :playlistId ORDER BY position ASC")
+    fun getTrackIdsInPlaylist(playlistId: Long): Flow<List<Long>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPlaylistTrackCrossRef(crossRef: PlaylistTrackCrossRef)
+    suspend fun addTrackToPlaylist(crossRef: PlaylistTrackCrossRef)
 
-    @Delete
-    suspend fun deletePlaylistTrackCrossRef(crossRef: PlaylistTrackCrossRef)
+    @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId AND trackId = :trackId")
+    suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: Long)
 
-    @Query("""
-        SELECT tracks.* FROM tracks
-        INNER JOIN playlist_track_cross_ref ON tracks.id = playlist_track_cross_ref.trackId
-        WHERE playlist_track_cross_ref.playlistId = :playlistId
-        ORDER BY playlist_track_cross_ref.position ASC
-    """)
-    fun getTracksInPlaylist(playlistId: Long): Flow<List<TrackEntity>>
+    @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlistId = :playlistId")
+    fun getPlaylistTrackCount(playlistId: Long): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM playlist_track_cross_ref WHERE playlistId = :playlistId")
-    suspend fun getPlaylistTrackCount(playlistId: Long): Int
+    @Query("SELECT MAX(position) FROM playlist_tracks WHERE playlistId = :playlistId")
+    suspend fun getMaxPosition(playlistId: Long): Int?
+
+    @Query("UPDATE playlist_tracks SET position = :newPosition WHERE playlistId = :playlistId AND trackId = :trackId")
+    suspend fun updateTrackPosition(playlistId: Long, trackId: Long, newPosition: Int)
+
+    @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId")
+    suspend fun clearPlaylist(playlistId: Long)
 }

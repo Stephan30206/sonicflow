@@ -24,6 +24,8 @@ class UserPreferences @Inject constructor(
         private val IS_SHUFFLE_ENABLED = booleanPreferencesKey("is_shuffle_enabled")
         private val REPEAT_MODE = stringPreferencesKey("repeat_mode")
         private val SORT_TYPE = stringPreferencesKey("sort_type")
+        private val FAVORITE_TRACKS_KEY = stringPreferencesKey("favorite_tracks")
+        private val IS_DARK_MODE_ENABLED = booleanPreferencesKey("is_dark_mode_enabled")
     }
 
     val lastPlayedTrackId: Flow<Long?> = dataStore.data.map { prefs ->
@@ -44,6 +46,14 @@ class UserPreferences @Inject constructor(
 
     val sortType: Flow<String> = dataStore.data.map { prefs ->
         prefs[SORT_TYPE] ?: "DATE_ADDED"
+    }
+
+    val isDarkModeEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[IS_DARK_MODE_ENABLED] ?: true
+    }
+
+    val favoriteTrackIds: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[FAVORITE_TRACKS_KEY]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
     }
 
     suspend fun saveLastPlayedTrack(trackId: Long, position: Long) {
@@ -69,5 +79,36 @@ class UserPreferences @Inject constructor(
         dataStore.edit { prefs ->
             prefs[SORT_TYPE] = type
         }
+    }
+
+    suspend fun saveDarkModeState(isDarkMode: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[IS_DARK_MODE_ENABLED] = isDarkMode
+        }
+    }
+
+    suspend fun addFavorite(trackId: Long) {
+        dataStore.edit { preferences ->
+            val currentFavorites = preferences[FAVORITE_TRACKS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
+            currentFavorites.add(trackId.toString())
+            preferences[FAVORITE_TRACKS_KEY] = currentFavorites.joinToString(",")
+        }
+    }
+
+    suspend fun removeFavorite(trackId: Long) {
+        dataStore.edit { preferences ->
+            val currentFavorites = preferences[FAVORITE_TRACKS_KEY]?.split(",")?.toMutableSet() ?: mutableSetOf()
+            currentFavorites.remove(trackId.toString())
+            preferences[FAVORITE_TRACKS_KEY] = currentFavorites.joinToString(",")
+        }
+    }
+
+    suspend fun isFavorite(trackId: Long): Boolean {
+        var result = false
+        dataStore.data.map { preferences ->
+            val favorites = preferences[FAVORITE_TRACKS_KEY]?.split(",")?.toSet() ?: emptySet()
+            result = favorites.contains(trackId.toString())
+        }
+        return result
     }
 }
