@@ -3,6 +3,7 @@ package com.example.sonicflow.presentation.player
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.sonicflow.data.model.Track
+import com.example.sonicflow.presentation.components.AlbumArtPlaceholder
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -47,6 +51,7 @@ fun MusicPlayerScreen(
     val screenHeight = configuration.screenHeightDp.dp
     val isSmallScreen = screenWidth < 360.dp
     val isMediumScreen = screenWidth >= 360.dp && screenWidth < 400.dp
+    var showTrackMenu by remember { mutableStateOf<Track?>(null) }
 
     Box(
         modifier = Modifier
@@ -152,7 +157,7 @@ fun MusicPlayerScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    color = Color(0xFF1E3A8A),
+                                    color = Color(0xFFF33249),
                                     shape = CircleShape
                                 )
                         )
@@ -230,7 +235,7 @@ fun MusicPlayerScreen(
 
                     Spacer(modifier = Modifier.height(if (isSmallScreen) 16.dp else 24.dp))
 
-                    // Progress Bar stylisée (comme dans l'image)
+                    // Progress Bar
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -363,6 +368,157 @@ fun MusicPlayerScreen(
                 }
             }
         }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrackContextMenu(
+    track: Track,
+    onDismiss: () -> Unit,
+    onPlayNext: () -> Unit,
+    onAddToQueue: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onShareTrack: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    isFavorite: Boolean
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E1E1E)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            // En-tête avec info de la piste
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                ) {
+                    if (track.albumArtUri != null) {
+                        AsyncImage(
+                            model = track.albumArtUri,
+                            contentDescription = "${track.title} album art",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = android.R.drawable.ic_media_play)
+                        )
+                    } else {
+                        AlbumArtPlaceholder(
+                            title = track.album,
+                            artist = track.artist,
+                            size = 56.dp,
+                            cornerRadius = 8.dp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        track.title,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        track.artist,
+                        color = Color.Gray,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Divider(color = Color.White.copy(alpha = 0.1f))
+
+            // Options du menu
+            MenuOption(
+                icon = Icons.Default.PlayArrow,
+                text = "Lire ensuite",
+                onClick = onPlayNext
+            )
+
+            MenuOption(
+                icon = Icons.Default.QueueMusic,
+                text = "Ajouter à la file d'attente",
+                onClick = onAddToQueue
+            )
+
+            MenuOption(
+                icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                text = if (isFavorite) "Retirer des favoris" else "Ajouter aux favoris",
+                iconTint = if (isFavorite) Color(0xFFFF4444) else Color.White,
+                onClick = onToggleFavorite
+            )
+
+            MenuOption(
+                icon = Icons.Default.PlaylistAdd,
+                text = "Ajouter à une playlist",
+                onClick = onAddToPlaylist
+            )
+
+            MenuOption(
+                icon = Icons.Default.Share,
+                text = "Partager",
+                onClick = onShareTrack
+            )
+
+            MenuOption(
+                icon = Icons.Default.Album,
+                text = "Voir l'album",
+                onClick = onDismiss
+            )
+
+            MenuOption(
+                icon = Icons.Default.Person,
+                text = "Voir l'artiste",
+                onClick = onDismiss
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun MenuOption(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    iconTint: Color = Color.White,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text,
+            color = Color.White,
+            fontSize = 16.sp
+        )
     }
 }
 
