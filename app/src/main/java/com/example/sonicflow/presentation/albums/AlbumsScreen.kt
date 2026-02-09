@@ -55,6 +55,8 @@ fun AlbumsScreen(
     }
 
     if (selectedAlbum != null) {
+        var showTrackMenu by remember { mutableStateOf<Track?>(null) }
+
         Scaffold(
             containerColor = Color(0xFF000000),
             topBar = {
@@ -96,10 +98,49 @@ fun AlbumsScreen(
                         onClick = {
                             playerViewModel.playTrack(track, index)
                             onNavigateToPlayer()
+                        },
+                        onMenuClick = {
+                            showTrackMenu = track
                         }
                     )
                 }
             }
+        }
+
+        if (showTrackMenu != null) {
+            AlertDialog(
+                onDismissRequest = { showTrackMenu = null },
+                title = { Text("Options") },
+                text = {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    playerViewModel.addToQueue(showTrackMenu!!)
+                                    showTrackMenu = null
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.QueueMusic,
+                                contentDescription = null,
+                                tint = Color(0xFFFFC107),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Ajouter à la file d'attente", color = Color.White)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTrackMenu = null }) {
+                        Text("Fermer")
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E)
+            )
         }
     } else {
         // Liste des albums
@@ -278,7 +319,8 @@ fun AlbumListItem(
 fun TrackItem(
     track: Track,
     isPlaying: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onMenuClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -320,12 +362,11 @@ fun TrackItem(
             )
         }
 
-        if (isPlaying) {
+        IconButton(onClick = onMenuClick) {
             Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Playing",
-                tint = Color(0xFFFFC107),
-                modifier = Modifier.size(24.dp)
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Options",
+                tint = Color.Gray
             )
         }
     }

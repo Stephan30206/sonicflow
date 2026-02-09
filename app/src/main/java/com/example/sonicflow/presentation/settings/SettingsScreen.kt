@@ -25,6 +25,10 @@ import com.example.sonicflow.presentation.settings.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToHome: (() -> Unit)? = null,
+    onNavigateToArtists: (() -> Unit)? = null,
+    onNavigateToAlbums: (() -> Unit)? = null,
+    onNavigateToPlaylists: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val isDarkMode by viewModel.isDarkModeEnabled.collectAsState()

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,8 +19,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -242,20 +245,59 @@ fun MusicPlayerScreen(
                         val duration = playbackState.duration.coerceAtLeast(1L)
                         val position = playbackState.currentPosition.coerceIn(0L, duration)
                         val progress = position.toFloat() / duration.toFloat()
+                        var isDragging by remember { mutableStateOf(false) }
+                        var dragPosition by remember { mutableStateOf(progress) }
 
-                        // Custom Progress Bar
-                        Box(
+                        val currentProgress = if (isDragging) dragPosition else progress
+
+                        // Custom Progress Bar - Now draggable avec BoxWithConstraints
+                        BoxWithConstraints(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color.Gray.copy(alpha = 0.3f))
+                                .height(24.dp)
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { isDragging = true },
+                                        onDragEnd = {
+                                            isDragging = false
+                                            viewModel.seekTo((dragPosition * duration).toLong())
+                                        },
+                                        onDrag = { change, _ ->
+                                            change.consume()
+                                            val newProgress = ((change.position.x) / size.width).coerceIn(0f, 1f)
+                                            dragPosition = newProgress
+                                        }
+                                    )
+                                }
                         ) {
+                            // Background track
                             Box(
                                 modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(progress)
-                                    .background(Color(0xFFFFC107))
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .align(Alignment.Center)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.Gray.copy(alpha = 0.3f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(currentProgress)
+                                        .background(Color(0xFFFFC107))
+                                )
+                            }
+
+                            // Draggable thumb
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .background(Color(0xFFFFC107), CircleShape)
+                                    .align(Alignment.CenterStart)
+                                    .offset(
+                                        x = with(LocalDensity.current) {
+                                            (currentProgress * (constraints.maxWidth - 12.dp.toPx())).toDp()
+                                        }
+                                    )
                             )
                         }
 
@@ -266,7 +308,9 @@ fun MusicPlayerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = viewModel.formatDuration(position),
+                                text = viewModel.formatDuration(
+                                    if (isDragging) (dragPosition * duration).toLong() else position
+                                ),
                                 color = Color.White,
                                 fontSize = if (isSmallScreen) 11.sp else 12.sp
                             )

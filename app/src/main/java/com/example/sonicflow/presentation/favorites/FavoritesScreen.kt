@@ -30,6 +30,10 @@ import com.example.sonicflow.presentation.player.PlayerViewModel
 fun FavoritesScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPlayer: () -> Unit,
+    onNavigateToHome: (() -> Unit)? = null,
+    onNavigateToArtists: (() -> Unit)? = null,
+    onNavigateToAlbums: (() -> Unit)? = null,
+    onNavigateToPlaylists: (() -> Unit)? = null,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel()
 ) {

@@ -48,6 +48,8 @@ fun PlaylistsScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
 
     if (selectedPlaylistId != null) {
+        var showTrackMenu by remember { mutableStateOf<Track?>(null) }
+
         Scaffold(
             containerColor = Color(0xFF000000),
             topBar = {
@@ -131,11 +133,72 @@ fun PlaylistsScreen(
                                 selectedPlaylistId?.let { playlistId ->
                                     libraryViewModel.removeTrackFromPlaylist(playlistId, track.id)
                                 }
+                            },
+                            onMenuClick = {
+                                showTrackMenu = track
                             }
                         )
                     }
                 }
             }
+        }
+
+        if (showTrackMenu != null) {
+            AlertDialog(
+                onDismissRequest = { showTrackMenu = null },
+                title = { Text("Options") },
+                text = {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    playerViewModel.addToQueue(showTrackMenu!!)
+                                    showTrackMenu = null
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.QueueMusic,
+                                contentDescription = null,
+                                tint = Color(0xFFFFC107),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Ajouter à la file d'attente", color = Color.White)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedPlaylistId?.let { playlistId ->
+                                        libraryViewModel.removeTrackFromPlaylist(playlistId, showTrackMenu!!.id)
+                                    }
+                                    showTrackMenu = null
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color(0xFFFF4444),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Retirer de la playlist", color = Color.White)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTrackMenu = null }) {
+                        Text("Fermer")
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E)
+            )
         }
     } else {
         // Liste des playlists
@@ -292,7 +355,8 @@ fun PlaylistTrackItem(
     track: Track,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onMenuClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -377,10 +441,10 @@ fun PlaylistTrackItem(
             )
         }
 
-        IconButton(onClick = onRemove) {
+        IconButton(onClick = onMenuClick) {
             Icon(
-                Icons.Default.Remove,
-                contentDescription = "Retirer",
+                Icons.Default.MoreVert,
+                contentDescription = "Options",
                 tint = Color.Gray
             )
         }

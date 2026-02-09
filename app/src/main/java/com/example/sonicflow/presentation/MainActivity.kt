@@ -161,7 +161,11 @@ fun AppNavigation(musicServiceConnection: MusicServiceConnection) {
                     composable("favorites") {
                         FavoritesScreen(
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToPlayer = { navController.navigate("player") }
+                            onNavigateToPlayer = { navController.navigate("player") },
+                            onNavigateToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                            onNavigateToArtists = { navController.navigate("artists") { popUpTo("home") } },
+                            onNavigateToAlbums = { navController.navigate("albums") { popUpTo("home") } },
+                            onNavigateToPlaylists = { navController.navigate("playlists") { popUpTo("home") } }
                         )
                     }
 
@@ -174,7 +178,11 @@ fun AppNavigation(musicServiceConnection: MusicServiceConnection) {
 
                     composable("settings") {
                         SettingsScreen(
-                            onNavigateBack = { navController.popBackStack() }
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                            onNavigateToArtists = { navController.navigate("artists") { popUpTo("home") } },
+                            onNavigateToAlbums = { navController.navigate("albums") { popUpTo("home") } },
+                            onNavigateToPlaylists = { navController.navigate("playlists") { popUpTo("home") } }
                         )
                     }
                 }
@@ -187,7 +195,7 @@ fun AppNavigation(musicServiceConnection: MusicServiceConnection) {
                 )
             }
 
-            if (currentRoute in listOf("home", "artists", "albums", "playlists")) {
+            if (currentRoute in listOf("home", "artists", "albums", "playlists", "favorites", "settings")) {
                 BottomNavBar(
                     currentRoute = currentRoute ?: "home",
                     onNavigateToHome = {

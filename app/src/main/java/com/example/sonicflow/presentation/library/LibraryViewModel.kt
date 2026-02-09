@@ -44,6 +44,16 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    init {
+        // Auto-create first playlist if none exists
+        viewModelScope.launch {
+            val existingPlaylists = musicRepository.getAllPlaylists().first()
+            if (existingPlaylists.isEmpty()) {
+                musicRepository.createPlaylist("Favoris", "Ma playlist par défaut")
+            }
+        }
+    }
+
     private val _selectedPlaylistId = MutableStateFlow<Long?>(null)
     val selectedPlaylistId: StateFlow<Long?> = _selectedPlaylistId.asStateFlow()
 

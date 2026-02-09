@@ -412,7 +412,7 @@ fun HomeScreen(
                             ) {
                                 items(artists.take(10)) { artist ->
                                     ArtistCard(
-                                        artist = artist,
+                                        name = artist,
                                         onClick = {
                                             libraryViewModel.selectArtist(artist)
                                             libraryViewModel.selectTab(com.example.sonicflow.presentation.library.LibraryTab.Artists)
@@ -447,7 +447,7 @@ fun HomeScreen(
                             ) {
                                 items(albums.take(10)) { album ->
                                     AlbumCard(
-                                        album = album,
+                                        name = album,
                                         onClick = {
                                             libraryViewModel.selectAlbum(album)
                                             libraryViewModel.selectTab(com.example.sonicflow.presentation.library.LibraryTab.Albums)
@@ -961,97 +961,7 @@ fun RecentTrackCard(
     }
 }
 
-@Composable
-fun ArtistCard(
-    artist: String,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(100.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF9C27B0),
-                            Color(0xFF673AB7)
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(48.dp)
-            )
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            artist,
-            color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun AlbumCard(
-    album: String,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF1E88E5),
-                            Color(0xFF00ACC1)
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Album,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(48.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            album,
-            color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
 
 @Composable
 fun TrackListItem(
@@ -1133,5 +1043,102 @@ fun TrackListItem(
                 tint = Color.Gray
             )
         }
+    }
+}
+
+// ==========================================
+// AJOUTER CES 2 FONCTIONS À LA FIN DE HomeScreen.kt
+// APRÈS la fonction TrackListItem (après la ligne ~1048)
+// ==========================================
+
+@Composable
+fun ArtistCard(
+    name: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            Color(0xFFAB47BC),
+                            Color(0xFF7B1FA2)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = name.take(2).uppercase(),
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            name,
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun AlbumCard(
+    name: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF00BCD4),
+                            Color(0xFF0097A7)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Album,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.size(64.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            name,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

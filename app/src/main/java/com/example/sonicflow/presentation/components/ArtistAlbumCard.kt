@@ -17,14 +17,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 @Composable
 fun ArtistCard(
     name: String,
+    imageUri: String? = null,
     onClick: () -> Unit
 ) {
     Column(
@@ -58,16 +61,27 @@ fun ArtistCard(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Artist",
-                tint = Color.White,
-                modifier = Modifier.size(40.dp)
-            )
+            if (!imageUri.isNullOrEmpty()) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = "$name album art",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Artist",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Text(
             text = name,
             color = Color.White,
@@ -82,6 +96,7 @@ fun ArtistCard(
 @Composable
 fun AlbumCard(
     name: String,
+    imageUri: String? = null,
     onClick: () -> Unit
 ) {
     Column(
@@ -115,16 +130,27 @@ fun AlbumCard(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Album,
-                contentDescription = "Album",
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(40.dp)
-            )
+            if (!imageUri.isNullOrEmpty()) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = "$name album art",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Album,
+                    contentDescription = "Album",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(40.dp)
+                )
+            }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Text(
             text = name,
             color = Color.White,
@@ -140,6 +166,7 @@ fun AlbumCard(
 fun PlaylistCard(
     name: String,
     trackCount: Int = 0,
+    imageUri: String? = null,
     onClick: () -> Unit
 ) {
     Column(
@@ -173,16 +200,27 @@ fun PlaylistCard(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Album,
-                contentDescription = "Playlist",
-                tint = Color.White,
-                modifier = Modifier.size(40.dp)
-            )
+            if (!imageUri.isNullOrEmpty()) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = "$name album art",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Album,
+                    contentDescription = "Playlist",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         Text(
             text = name,
             color = Color.White,
@@ -191,7 +229,7 @@ fun PlaylistCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-        
+
         if (trackCount > 0) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
